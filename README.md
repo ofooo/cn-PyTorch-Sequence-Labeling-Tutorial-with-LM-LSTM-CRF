@@ -1,48 +1,40 @@
-This is a **[PyTorch](https://pytorch.org) Tutorial to Sequence Labeling**.
+**这是一篇pytorch序列标注教程的中文翻译。**[原文链接](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling)
 
-This is the second in a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing PyTorch library.
+依赖： `PyTorch 0.4` in `Python 3.6`.
 
-Basic knowledge of PyTorch, recurrent neural networks is assumed.
+# 内容
 
-If you're new to PyTorch, first read [Deep Learning with PyTorch: A 60 Minute Blitz](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html) and [Learning PyTorch with Examples](https://pytorch.org/tutorials/beginner/pytorch_with_examples.html).
+[***目标***](https://github.com/ofooo/cn-PyTorch-Sequence-Labeling-Tutorial-with-LM-LSTM-CRF#目标)
 
-Questions, suggestions, or corrections can be posted as issues.
+[***概念***](https://github.com/ofooo/cn-PyTorch-Sequence-Labeling-Tutorial-with-LM-LSTM-CRF#概念)
 
-I'm using `PyTorch 0.4` in `Python 3.6`.
+[***概述***](https://github.com/ofooo/cn-PyTorch-Sequence-Labeling-Tutorial-with-LM-LSTM-CRF#overview)
 
-# Contents
+[***实现***](https://github.com/ofooo/cn-PyTorch-Sequence-Labeling-Tutorial-with-LM-LSTM-CRF#implementation)
 
-[***Objective***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling#objective)
+[***训练***](https://github.com/ofooo/cn-PyTorch-Sequence-Labeling-Tutorial-with-LM-LSTM-CRF#training)
 
-[***Concepts***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling#concepts)
+[***常见问题***](https://github.com/ofooo/cn-PyTorch-Sequence-Labeling-Tutorial-with-LM-LSTM-CRF#faqs)
 
-[***Overview***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling#overview)
+# 目标
 
-[***Implementation***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling#implementation)
-
-[***Training***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling#training)
-
-[***Frequently Asked Questions***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling#faqs)
-
-# Objective
-
-**To build a model that can tag each word in a sentence with entities, parts of speech, etc.**
+**建立一个模型，可以标记出句子每个单词所属的实体、语音等部分。**
 
 ![](./img/ill.jpg)
 
-We will be implementing the [_Empower Sequence Labeling with Task-Aware Neural Language Model_](https://arxiv.org/abs/1709.04109) paper. This is more advanced than most sequence tagging models, but you will learn many useful concepts – and it works extremely well. The authors' original implementation can be found [here](https://github.com/LiyuanLucasLiu/LM-LSTM-CRF).
+我们将实现论文： [_Empower Sequence Labeling with Task-Aware Neural Language Model_](https://arxiv.org/abs/1709.04109) 中的模型. 这比大多数的序列标记模型更先进，你会学到许多有用的概念，而且它工作得非常好。 作者的原始实现可以在这里找到。 [链接](https://github.com/LiyuanLucasLiu/LM-LSTM-CRF).
 
-This model is special because it augments the sequence labeling task by training it _concurrently_ with language models.
+该模型之所以特殊，是因为它通过与语言模型同时训练来增强序列标记任务表现。
 
-# Concepts
+# 概念
 
-* **Sequence Labeling**. duh.
+* **Sequence Labeling 序列标注**.  略...
 
-* **Language Models**. Language Modeling is to predict the next word or character in a sequence of words or characters. Neural language models achieve impressive results across a wide variety of NLP tasks like text generation, machine translation, image captioning, optical character recognition, and what have you.
+* **Language Models 语言模型**.  语言模型是在一系列单词或字符序列中预测下一个单词或字符。 神经网络语言模型在各种各样的 NLP 任务中取得了令人印象深刻的结果，比如文本生成、机器翻译、图像字幕、光学字符识别等。
 
-* **Character RNNs**. RNNs operating on individual characters in a text [are known](http://karpathy.github.io/2015/05/21/rnn-effectiveness/) to capture the underlying style and structure. In a sequence labeling task, they are especially useful since sub-word information can often yield important clues to an entity or tag.
+* **Character RNNs 字符级循环网络**. 在文本中对单个字符进行操作的 RNNs  [参考](http://karpathy.github.io/2015/05/21/rnn-effectiveness/)可以捕捉底层的样式和结构（这里的字符一般指的是英文字母）。 在序列标记的任务中，它们特别有用，因为字符信息往往可以为一个实体或标记提供重要的线索。
 
-* **Multi-Task Learning**. Datasets available to train a model are often small. Creating annotations or handcrafted features to help your model along is not only cumbersome, but also frequently not adaptable to the diverse domains or settings in which your model may be useful. Sequence labeling, unfortunately, is a prime example. There is a way to mitigate this problem – jointly training multiple models that are joined at the hip will maximize the information available to each model, improving performance.
+* **Multi-Task Learning 多任务学习**. 可用于训练模型的数据集通常很小。 创建手工特征来帮助你的模型不仅很麻烦，而且你的模型经常不能适应变化的领域。 不幸的是，序列标注就是一个很好的例子。 有一种方法可以缓解这个问题——联合培训多个任务模型，并将它们连接在一起，最大限度地提高每个模型的可用信息，提高性能。
 
 * **Conditional Random Fields**. Discrete classifiers predict a class or label at a word. Conditional Random Fields (CRFs) can do you one better – they predict labels based on not just the word, but also the neighborhood. Which makes sense, because there _are_ patterns in a sequence of entities or labels. CRFs are widely used to model ordered information, be it for sequence labeling, gene sequencing, or even object detection and image segmentation in computer vision.
 
